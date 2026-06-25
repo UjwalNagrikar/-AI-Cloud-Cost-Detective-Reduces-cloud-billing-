@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+email-validator
+openai
+python-dotenv
+asyncpg
+websockets
+PyJWT
+bcrypt
