@@ -1,169 +1,106 @@
-import json
-import os
-from typing import Any
-
-from openai import (
-    OpenAI,
-    APIConnectionError,
-    APITimeoutError,
-    APIStatusError,
-    RateLimitError,
-)
-
-SYSTEM_PROMPT = """
-You are an expert Azure FinOps engineer.
-
-Analyze Azure resources for cloud cost optimization.
-
-Return ONLY valid JSON:
-
-{
-  "summary":"...",
-  "issues":[
-    {
-      "resource_name":"...",
-      "issue_type":"...",
-      "severity":"high|medium|low",
-      "explanation":"...",
-      "estimated_savings":"...",
-      "fix_command":"..."
-    }
-  ],
-  "estimated_savings":"..."
-}
 """
-
-
-def get_client() -> OpenAI:
-    provider = os.getenv("AI_PROVIDER", "groq").lower()
-
-    if provider == "groq":
-        return OpenAI(
-            api_key=os.getenv("GROQ_API_KEY"),
-            base_url="https://api.groq.com/openai/v1",
-        )
-
-    return OpenAI(
-        api_key=os.getenv("OPENAI_API_KEY"),
-    )
-
-
-MODEL = os.getenv("AI_MODEL", "llama-3.3-70b-versatile")
-
-
-def fallback(reason: str) -> dict[str, Any]:
-    return {
-        "summary": f"AI analysis unavailable ({reason})",
-        "issues": [],
-        "estimated_savings": "Unknown",
-    }
-
-
-def normalize(payload: dict[str, Any]) -> dict[str, Any]:
-
-    issues = []
-
-    for issue in payload.get("issues", []):
-
-        if not isinstance(issue, dict):
-            continue
-
-        severity = issue.get("severity", "low").lower()
-
-        if severity not in ["high", "medium", "low"]:
-            severity = "low"
-
-        issues.append(
-            {
-                "resource_name": issue.get(
-                    "resource_name",
-                    "Unknown Resource",
-                ),
-                "issue_type": issue.get(
-                    "issue_type",
-                    "other",
-                ),
-                "severity": severity,
-                "explanation": issue.get(
-                    "explanation",
-                    "No explanation.",
-                ),
-                "estimated_savings": issue.get(
-                    "estimated_savings",
-                    "Unknown",
-                ),
-                "fix_command": issue.get(
-                    "fix_command",
-                    "az resource list",
-                ),
-            }
-        )
-
-    return {
-        "summary": payload.get(
-            "summary",
-            "Analysis completed.",
-        ),
-        "issues": issues,
-        "estimated_savings": payload.get(
-            "estimated_savings",
-            "Unknown",
-        ),
-    }
+AI-powered cost analysis for Azure resources.
+Identifies cost optimization opportunities in scanned resources.
+"""
+from typing import Any
 
 
 def analyze_costs(resources: list[dict[str, Any]]) -> dict[str, Any]:
-
-    client = get_client()
-
-    prompt = {
-        "task": "Analyze Azure resources for cost optimization.",
-        "checks": [
-            "unused resources",
-            "over provisioning",
-            "wrong pricing tier",
-            "idle resources",
-            "recommend Azure CLI fixes",
-        ],
-        "resources": resources,
+    """
+    Analyze scanned Azure resources and return cost optimization recommendations.
+    
+    Args:
+        resources: List of resource dictionaries from azure_scanner.scan_resource_group()
+        
+    Returns:
+        dict with 'issues' list and 'estimated_savings' dict
+    """
+    issues = []
+    total_monthly_savings = 0.0
+    
+    for resource in resources:
+        resource_type = resource.get("type", "")
+        name = resource.get("name", "unknown")
+        resource_group = resource.get("resource_group", "")
+        fix_command = resource.get("fix_command", "")
+        
+        # ── Unattached Managed Disks ──
+        if resource_type == "Microsoft.Compute/disks":
+            disk_state = resource.get("properties", {}).get("diskState", "")
+            if disk_state != "Attached":
+                issues.append({
+                    "resource_name": name,
+                    "resource_type": resource_type,
+                    "resource_group": resource_group,
+                    "issue": "Unattached managed disk incurring costs",
+                    "suggestion": "Delete this disk or attach it to a VM to avoid unnecessary charges",
+                    "severity": "high",
+                    "estimated_monthly_savings": "Varies ($5-50/month depending on size and tier)",
+                    "fix_command": fix_command,
+                })
+        
+        # ── Unassociated Public IPs ──
+        elif resource_type == "Microsoft.Network/publicIPAddresses":
+            ip_config = resource.get("properties", {}).get("ipConfiguration")
+            if not ip_config:
+                monthly_saving = 3.65
+                total_monthly_savings += monthly_saving
+                issues.append({
+                    "resource_name": name,
+                    "resource_type": resource_type,
+                    "resource_group": resource_group,
+                    "issue": "Unassociated public IP address",
+                    "suggestion": "Delete unused public IP to stop incurring charges (~$3.65/month)",
+                    "severity": "medium",
+                    "estimated_monthly_savings": f"${monthly_saving:.2f}/month",
+                    "fix_command": fix_command,
+                })
+        
+        # ── Deallocated VMs ──
+        elif resource_type == "Microsoft.Compute/virtualMachines":
+            power_state = resource.get("properties", {}).get("powerState", "")
+            if "deallocated" in str(power_state).lower():
+                issues.append({
+                    "resource_name": name,
+                    "resource_type": resource_type,
+                    "resource_group": resource_group,
+                    "issue": "VM is deallocated but attached disks still incur costs",
+                    "suggestion": "Consider deleting the VM and its disks if no longer needed, or use Azure Reserved Instances",
+                    "severity": "medium",
+                    "estimated_monthly_savings": "Depends on attached disk sizes",
+                    "fix_command": fix_command,
+                })
+        
+        # ── Premium Storage (potentially overprovisioned) ──
+        elif resource_type == "Microsoft.Storage/storageAccounts":
+            sku = resource.get("sku", {})
+            if isinstance(sku, dict):
+                sku_name = sku.get("name", "")
+            else:
+                sku_name = str(sku)
+            
+            if "Premium" in sku_name:
+                issues.append({
+                    "resource_name": name,
+                    "resource_type": resource_type,
+                    "resource_group": resource_group,
+                    "issue": "Premium storage tier may be overprovisioned",
+                    "suggestion": "Evaluate if Standard tier would meet your performance needs for cost reduction",
+                    "severity": "low",
+                    "estimated_monthly_savings": "40-60% reduction in storage costs",
+                    "fix_command": fix_command,
+                })
+        
+        # ── Empty or Unused Resource Groups ──
+        # This would need group-level analysis, handled differently
+    
+    total_yearly_savings = total_monthly_savings * 12
+    
+    return {
+        "issues": issues,
+        "estimated_savings": {
+            "monthly": round(total_monthly_savings, 2),
+            "yearly": round(total_yearly_savings, 2),
+            "currency": "USD",
+        },
     }
-
-    try:
-
-        response = client.chat.completions.create(
-            model=MODEL,
-            temperature=0.2,
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "system",
-                    "content": SYSTEM_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": json.dumps(prompt, default=str),
-                },
-            ],
-        )
-
-        content = response.choices[0].message.content or "{}"
-
-        return normalize(json.loads(content))
-
-    except RateLimitError:
-        return fallback("Quota exceeded")
-
-    except APITimeoutError:
-        return fallback("Timeout")
-
-    except APIConnectionError:
-        return fallback("Connection error")
-
-    except APIStatusError as e:
-        return fallback(f"API Error {e.status_code}")
-
-    except json.JSONDecodeError:
-        return fallback("Invalid JSON returned")
-
-    except Exception as e:
-        return fallback(str(e))
