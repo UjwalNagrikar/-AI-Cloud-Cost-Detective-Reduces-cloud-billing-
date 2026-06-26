@@ -7,7 +7,6 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-
 security = HTTPBearer()
 
 
@@ -20,7 +19,9 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def _jwt_secret() -> str:
-    return os.getenv("JWT_SECRET", "dev-secret-change-me")
+    secret = os.getenv("JWT_SECRET", "dev-secret-change-me")
+    print("JWT SECRET:", secret)
+    return secret
 
 
 def _jwt_algorithm() -> str:
@@ -29,27 +30,57 @@ def _jwt_algorithm() -> str:
 
 def create_access_token(user: dict[str, Any]) -> str:
     now = datetime.now(timezone.utc)
+
     payload = {
         "sub": str(user["id"]),
         "email": user["email"],
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(hours=12)).timestamp()),
     }
-    return jwt.encode(payload, _jwt_secret(), algorithm=_jwt_algorithm())
+
+    token = jwt.encode(
+        payload,
+        _jwt_secret(),
+        algorithm=_jwt_algorithm(),
+    )
+
+    print("GENERATED TOKEN:", token)
+
+    return token
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
+    print("=" * 80)
+    print("TOKEN RECEIVED:", token)
+
     try:
-        return jwt.decode(token, _jwt_secret(), algorithms=[_jwt_algorithm()])
-    except jwt.PyJWTError as exc:
+        payload = jwt.decode(
+            token,
+            _jwt_secret(),
+            algorithms=[_jwt_algorithm()],
+        )
+
+        print("JWT PAYLOAD:", payload)
+
+        return payload
+
+    except Exception as e:
+        print("JWT ERROR:", repr(e))
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token.",
-        ) from exc
+        )
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict[str, Any]:
+    print("AUTH HEADER:", credentials.credentials)
+
     payload = decode_access_token(credentials.credentials)
-    return {"id": int(payload["sub"]), "email": payload["email"]}
+
+    return {
+        "id": int(payload["sub"]),
+        "email": payload["email"],
+    }

@@ -1,4 +1,15 @@
-# Environment files
-backend/.env
+# Environment
 .env
-*.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log

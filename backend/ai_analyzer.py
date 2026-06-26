@@ -2,88 +2,168 @@ import json
 import os
 from typing import Any
 
-from openai import OpenAI
+from openai import (
+    OpenAI,
+    APIConnectionError,
+    APITimeoutError,
+    APIStatusError,
+    RateLimitError,
+)
 
+SYSTEM_PROMPT = """
+You are an expert Azure FinOps engineer.
 
-SYSTEM_PROMPT = """You are an expert Azure FinOps engineer.
-Analyze Azure resource inventory for cloud cost optimization.
-Return only valid JSON with this shape:
+Analyze Azure resources for cloud cost optimization.
+
+Return ONLY valid JSON:
+
 {
-  "summary": "short executive summary",
-  "issues": [
+  "summary":"...",
+  "issues":[
     {
-      "resource_name": "name",
-      "issue_type": "over-provisioned | unused | misconfigured | wrong pricing tier | other",
-      "severity": "high | medium | low",
-      "explanation": "why this is a cost concern",
-      "estimated_savings": "monthly savings estimate or unknown",
-      "fix_command": "Azure CLI command to fix or inspect further"
+      "resource_name":"...",
+      "issue_type":"...",
+      "severity":"high|medium|low",
+      "explanation":"...",
+      "estimated_savings":"...",
+      "fix_command":"..."
     }
   ],
-  "estimated_savings": "overall monthly savings estimate"
+  "estimated_savings":"..."
 }
-Prefer concrete Azure CLI commands. If evidence is insufficient, recommend safe inspection commands.
 """
 
 
-def _coerce_analysis(payload: dict[str, Any]) -> dict[str, Any]:
-    issues = payload.get("issues")
-    if not isinstance(issues, list):
-        issues = []
+def get_client() -> OpenAI:
+    provider = os.getenv("AI_PROVIDER", "groq").lower()
 
-    normalized_issues = []
-    for issue in issues:
+    if provider == "groq":
+        return OpenAI(
+            api_key=os.getenv("GROQ_API_KEY"),
+            base_url="https://api.groq.com/openai/v1",
+        )
+
+    return OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY"),
+    )
+
+
+MODEL = os.getenv("AI_MODEL", "llama-3.3-70b-versatile")
+
+
+def fallback(reason: str) -> dict[str, Any]:
+    return {
+        "summary": f"AI analysis unavailable ({reason})",
+        "issues": [],
+        "estimated_savings": "Unknown",
+    }
+
+
+def normalize(payload: dict[str, Any]) -> dict[str, Any]:
+
+    issues = []
+
+    for issue in payload.get("issues", []):
+
         if not isinstance(issue, dict):
             continue
-        severity = str(issue.get("severity", "low")).lower()
-        if severity not in {"high", "medium", "low"}:
+
+        severity = issue.get("severity", "low").lower()
+
+        if severity not in ["high", "medium", "low"]:
             severity = "low"
 
-        normalized_issues.append(
+        issues.append(
             {
-                "resource_name": issue.get("resource_name") or "Unknown resource",
-                "issue_type": issue.get("issue_type") or "other",
+                "resource_name": issue.get(
+                    "resource_name",
+                    "Unknown Resource",
+                ),
+                "issue_type": issue.get(
+                    "issue_type",
+                    "other",
+                ),
                 "severity": severity,
-                "explanation": issue.get("explanation") or "No explanation provided.",
-                "estimated_savings": issue.get("estimated_savings") or "Unknown",
-                "fix_command": issue.get("fix_command") or "az resource show --name <name>",
+                "explanation": issue.get(
+                    "explanation",
+                    "No explanation.",
+                ),
+                "estimated_savings": issue.get(
+                    "estimated_savings",
+                    "Unknown",
+                ),
+                "fix_command": issue.get(
+                    "fix_command",
+                    "az resource list",
+                ),
             }
         )
 
     return {
-        "summary": payload.get("summary") or "Analysis completed.",
-        "issues": normalized_issues,
-        "estimated_savings": payload.get("estimated_savings") or "Unknown",
+        "summary": payload.get(
+            "summary",
+            "Analysis completed.",
+        ),
+        "issues": issues,
+        "estimated_savings": payload.get(
+            "estimated_savings",
+            "Unknown",
+        ),
     }
 
 
 def analyze_costs(resources: list[dict[str, Any]]) -> dict[str, Any]:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured.")
 
-    client = OpenAI(api_key=api_key)
-    user_prompt = {
-        "task": "Analyze these Azure resources for cost optimization opportunities.",
+    client = get_client()
+
+    prompt = {
+        "task": "Analyze Azure resources for cost optimization.",
         "checks": [
-            "over-provisioning",
-            "unused or idle resources",
-            "misconfigurations",
-            "wrong pricing tiers",
-            "actionable Azure CLI fixes",
+            "unused resources",
+            "over provisioning",
+            "wrong pricing tier",
+            "idle resources",
+            "recommend Azure CLI fixes",
         ],
         "resources": resources,
     }
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": json.dumps(user_prompt, default=str)},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.2,
-    )
+    try:
 
-    content = response.choices[0].message.content or "{}"
-    return _coerce_analysis(json.loads(content))
+        response = client.chat.completions.create(
+            model=MODEL,
+            temperature=0.2,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": json.dumps(prompt, default=str),
+                },
+            ],
+        )
+
+        content = response.choices[0].message.content or "{}"
+
+        return normalize(json.loads(content))
+
+    except RateLimitError:
+        return fallback("Quota exceeded")
+
+    except APITimeoutError:
+        return fallback("Timeout")
+
+    except APIConnectionError:
+        return fallback("Connection error")
+
+    except APIStatusError as e:
+        return fallback(f"API Error {e.status_code}")
+
+    except json.JSONDecodeError:
+        return fallback("Invalid JSON returned")
+
+    except Exception as e:
+        return fallback(str(e))
