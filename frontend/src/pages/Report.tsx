@@ -44,14 +44,15 @@ function IssueCard({ issue }: { issue: Issue }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold text-white">{issue.resource_name}</h3>
-          <p className="mt-1 text-sm text-slate-400">{issue.issue_type}</p>
+          <p className="mt-1 text-sm text-slate-400">{issue.resource_type}</p>
         </div>
         <span className={`rounded-md border px-2 py-1 text-xs font-semibold capitalize ${severityClass[issue.severity]}`}>
           {issue.severity}
         </span>
       </div>
-      <p className="mt-3 text-sm leading-6 text-slate-300">{issue.explanation}</p>
-      <p className="mt-3 text-sm text-slate-400">Estimated savings: <span className="text-slate-100">{issue.estimated_savings}</span></p>
+      <p className="mt-3 text-sm leading-6 text-slate-300">{issue.issue}</p>
+      <p className="mt-2 text-sm text-slate-300">Suggestion: {issue.suggestion}</p>
+      <p className="mt-3 text-sm text-slate-400">Estimated savings: <span className="text-slate-100">{issue.estimated_monthly_savings}</span></p>
       <CopyBlock command={issue.fix_command} />
     </article>
   );
@@ -81,6 +82,7 @@ export default function Report() {
   }
 
   const result = analysis.analysis_result;
+  const savings = analysis.estimated_savings;
 
   return (
     <div className="space-y-6">
@@ -106,11 +108,15 @@ export default function Report() {
           </div>
           <div className="rounded-md border border-line bg-ink p-4">
             <p className="text-sm text-slate-400">Estimated savings</p>
-            <p className="mt-2 text-2xl font-semibold text-white">{analysis.estimated_savings}</p>
+            <p className="mt-2 text-2xl font-semibold text-white">
+              {savings.currency} {savings.monthly.toFixed(2)}/month
+            </p>
           </div>
         </div>
 
-        <p className="mt-5 leading-7 text-slate-300">{result.summary}</p>
+        <p className="mt-5 leading-7 text-slate-300">
+          Found {result.issues.length} cost optimization opportunities. Estimated monthly savings: {savings.currency} {savings.monthly.toFixed(2)}.
+        </p>
       </section>
 
       <section className="space-y-4">

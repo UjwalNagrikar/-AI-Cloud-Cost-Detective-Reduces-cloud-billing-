@@ -4,6 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { fetchHistory } from "../api";
 import type { AnalysisRecord } from "../types";
 
+function formatSavings(savings: { monthly: number; yearly: number; currency: string }) {
+  return `${savings.currency} ${savings.monthly.toFixed(2)}/month`;
+}
+
 export default function History() {
   const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisRecord[]>([]);
@@ -60,7 +64,7 @@ export default function History() {
                   <td className="px-4 py-4 font-medium text-white">{analysis.resource_group}</td>
                   <td className="px-4 py-4 text-slate-300">{new Date(analysis.created_at).toLocaleString()}</td>
                   <td className="px-4 py-4 text-slate-300">{analysis.issues_found}</td>
-                  <td className="px-4 py-4 text-slate-300">{analysis.estimated_savings}</td>
+                  <td className="px-4 py-4 text-slate-300">{formatSavings(analysis.estimated_savings)}</td>
                 </tr>
               ))
             )}
