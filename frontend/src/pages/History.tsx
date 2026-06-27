@@ -1,18 +1,22 @@
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, ChevronRight, TrendingDown, Loader2, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchHistory } from "../api";
 import type { AnalysisRecord } from "../types";
 
-function formatSavings(savings: { monthly: number; yearly: number; currency: string }) {
-  return `${savings.currency} ${savings.monthly.toFixed(2)}/month`;
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  return {
+    date: d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+    time: d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+  };
 }
 
 export default function History() {
   const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisRecord[]>([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [error, setError]       = useState("");
+  const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
     fetchHistory()
@@ -22,55 +26,169 @@ export default function History() {
   }, []);
 
   return (
-    <section className="rounded-md border border-line bg-panel p-5">
-      <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-md bg-good/10 text-good">
-          <CalendarClock size={20} />
-        </span>
-        <div>
-          <h1 className="text-xl font-semibold text-white">History</h1>
-          <p className="text-sm text-slate-400">Past cost analyses</p>
+    <div className="space-y-6">
+
+      {/* Header */}
+      <div className="animate-fade-up">
+        <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">
+          Analysis · History
+        </p>
+        <h1
+          className="text-3xl font-bold font-display tracking-tight"
+          style={{
+            background: "linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          Past Scans
+        </h1>
+        <p className="text-slate-500 text-sm mt-1">
+          All previous cost analyses — click any row to view the full report.
+        </p>
+      </div>
+
+      {/* Body */}
+      <div
+        className="rounded-2xl overflow-hidden animate-fade-up"
+        style={{
+          background: "rgba(6,15,30,0.7)",
+          border: "1px solid rgba(0,212,255,0.1)",
+          animationDelay: "60ms",
+        }}
+      >
+        {/* Table header */}
+        <div
+          className="grid gap-3 px-5 py-3 text-[11px] font-semibold uppercase tracking-widest text-slate-600"
+          style={{
+            gridTemplateColumns: "1fr 1fr auto auto auto",
+            borderBottom: "1px solid rgba(26,53,87,0.8)",
+            background: "rgba(2,11,24,0.4)",
+          }}
+        >
+          <span>Resource Group</span>
+          <span>Date</span>
+          <span className="text-center">Resources</span>
+          <span className="text-center">Issues</span>
+          <span>Savings</span>
         </div>
-      </div>
 
-      {error && <p className="mt-4 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-red-200">{error}</p>}
-
-      <div className="mt-5 overflow-hidden rounded-md border border-line">
-        <table className="w-full border-collapse text-left text-sm">
-          <thead className="bg-ink text-slate-400">
-            <tr>
-              <th className="px-4 py-3 font-medium">Resource group</th>
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Issues</th>
-              <th className="px-4 py-3 font-medium">Savings</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {loading ? (
-              <tr>
-                <td className="px-4 py-4 text-slate-400" colSpan={4}>Loading history...</td>
-              </tr>
-            ) : analyses.length === 0 ? (
-              <tr>
-                <td className="px-4 py-4 text-slate-400" colSpan={4}>No analyses yet.</td>
-              </tr>
-            ) : (
-              analyses.map((analysis) => (
-                <tr
+        {/* Rows */}
+        {loading ? (
+          <div className="flex items-center justify-center gap-3 py-16 text-slate-600">
+            <Loader2 size={18} className="animate-spin text-signal" />
+            <span className="text-sm">Loading history...</span>
+          </div>
+        ) : error ? (
+          <div className="p-5">
+            <div className="alert-error">{error}</div>
+          </div>
+        ) : analyses.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-center px-6">
+            <div
+              className="h-16 w-16 rounded-2xl flex items-center justify-center"
+              style={{
+                background: "rgba(0,212,255,0.05)",
+                border: "1px solid rgba(0,212,255,0.12)",
+              }}
+            >
+              <CalendarClock size={28} className="text-slate-600" />
+            </div>
+            <div>
+              <p className="text-slate-300 font-semibold">No analyses yet</p>
+              <p className="text-slate-600 text-sm mt-1">
+                Run your first scan from the Dashboard to see results here.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ul>
+            {analyses.map((analysis, i) => {
+              const { date, time } = formatDate(analysis.created_at);
+              return (
+                <li
                   key={analysis.id}
-                  className="cursor-pointer bg-panel hover:bg-white/5"
-                  onClick={() => navigate(`/report/${analysis.id}`, { state: { analysis } })}
+                  onClick={() =>
+                    navigate(`/report/${analysis.id}`, { state: { analysis } })
+                  }
+                  className="tr-hover grid gap-3 px-5 py-4 items-center animate-fade-up"
+                  style={{
+                    gridTemplateColumns: "1fr 1fr auto auto auto",
+                    borderTop: i > 0 ? "1px solid rgba(26,53,87,0.5)" : undefined,
+                    animationDelay: `${i * 50}ms`,
+                  }}
                 >
-                  <td className="px-4 py-4 font-medium text-white">{analysis.resource_group}</td>
-                  <td className="px-4 py-4 text-slate-300">{new Date(analysis.created_at).toLocaleString()}</td>
-                  <td className="px-4 py-4 text-slate-300">{analysis.issues_found}</td>
-                  <td className="px-4 py-4 text-slate-300">{formatSavings(analysis.estimated_savings)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  {/* Resource group name */}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div
+                      className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+                      style={{
+                        background: "rgba(0,212,255,0.06)",
+                        border: "1px solid rgba(0,212,255,0.14)",
+                      }}
+                    >
+                      <CalendarClock size={13} className="text-signal" />
+                    </div>
+                    <span className="font-medium text-slate-200 text-sm truncate">
+                      {analysis.resource_group}
+                    </span>
+                  </div>
+
+                  {/* Date */}
+                  <div className="flex items-center gap-1.5 text-slate-500 text-xs">
+                    <Clock size={11} />
+                    <span>{date}</span>
+                    <span className="text-slate-700">·</span>
+                    <span>{time}</span>
+                  </div>
+
+                  {/* Resources */}
+                  <div className="text-center">
+                    <span className="text-sm font-semibold text-slate-300">
+                      {analysis.resources_scanned}
+                    </span>
+                  </div>
+
+                  {/* Issues */}
+                  <div className="text-center">
+                    <span
+                      className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-md text-xs font-bold"
+                      style={
+                        analysis.issues_found > 0
+                          ? {
+                              background: "rgba(245,158,11,0.12)",
+                              border: "1px solid rgba(245,158,11,0.25)",
+                              color: "#fcd34d",
+                            }
+                          : {
+                              background: "rgba(34,197,94,0.08)",
+                              border: "1px solid rgba(34,197,94,0.2)",
+                              color: "#86efac",
+                            }
+                      }
+                    >
+                      {analysis.issues_found}
+                    </span>
+                  </div>
+
+                  {/* Savings + arrow */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <TrendingDown size={12} className="text-good" />
+                      <span className="text-sm font-semibold text-good">
+                        {analysis.estimated_savings}
+                      </span>
+                    </div>
+                    <ChevronRight size={14} className="text-slate-700 ml-1" />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
-    </section>
+    </div>
   );
 }
