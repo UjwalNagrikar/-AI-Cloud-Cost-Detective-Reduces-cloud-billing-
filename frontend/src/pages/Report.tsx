@@ -210,7 +210,7 @@ export default function Report() {
                   backgroundClip: "text",
                 }}
               >
-                {analysis.estimated_savings}
+                ${analysis.estimated_savings.monthly} {analysis.estimated_savings.currency}
               </p>
               <p className="text-[10px] text-slate-600">per month</p>
             </div>
@@ -223,7 +223,7 @@ export default function Report() {
           <div className="mt-5 grid grid-cols-3 gap-3">
             <StatCard label="Resources" value={analysis.resources_scanned} />
             <StatCard label="Issues"    value={analysis.issues_found} color="text-warn" glow="rgba(245,158,11,0.05)" />
-            <StatCard label="Savings"   value={analysis.estimated_savings} color="text-good" glow="rgba(34,197,94,0.05)" />
+            <StatCard label="Savings"   value={`$${analysis.estimated_savings.monthly}`} color="text-good" glow="rgba(34,197,94,0.05)" />
           </div>
 
           {/* Severity breakdown */}

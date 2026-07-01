@@ -1,15 +1,7 @@
-import { BarChart3, Clock, LogOut, Radar } from "lucide-react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { tokenStore } from "../api";
+import { BarChart3, Clock, Radar } from "lucide-react";
+import { Link, NavLink } from "react-router-dom";
 
 export default function Navbar() {
-  const navigate = useNavigate();
-
-  function logout() {
-    tokenStore.clear();
-    navigate("/login");
-  }
-
   return (
     <header
       className="sticky top-0 z-50 border-b"
@@ -27,7 +19,7 @@ export default function Navbar() {
           <div className="relative">
             <div className="absolute inset-0 rounded-xl bg-signal/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div
-              className="relative h-9 w-9 rounded-xl flex items-center justify-center border"
+              className="relative h-9 w-9 rounded-xl flex items-center justify-center border"  
               style={{
                 background: "rgba(0, 212, 255, 0.08)",
                 borderColor: "rgba(0, 212, 255, 0.2)",
@@ -37,7 +29,7 @@ export default function Navbar() {
             </div>
           </div>
           <div className="leading-none">
-            <div className="text-[11px] font-medium text-slate-500 uppercase tracking-widest">
+            <div className="text-[11px] font-medium text-slate-500 uppercase tracking-widest"> 
               AI Cloud Cost
             </div>
             <div
@@ -99,18 +91,6 @@ export default function Navbar() {
             <Clock size={15} />
             History
           </NavLink>
-
-          {/* Divider */}
-          <div className="w-px h-5 bg-frame/80 mx-1" />
-
-          <button
-            type="button"
-            onClick={logout}
-            title="Log out"
-            className="h-9 w-9 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all duration-150"
-          >
-            <LogOut size={15} />
-          </button>
         </nav>
       </div>
     </header>
