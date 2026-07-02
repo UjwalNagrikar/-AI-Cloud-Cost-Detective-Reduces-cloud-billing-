@@ -1,4 +1,4 @@
-import { BarChart3, Clock, Radar } from "lucide-react";
+import { BarChart3, Radar } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 
 export default function Navbar() {
@@ -70,27 +70,7 @@ export default function Navbar() {
             Dashboard
           </NavLink>
 
-          <NavLink
-            to="/history"
-            className={({ isActive }) =>
-              `flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? "text-signal"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-              }`
-            }
-            style={({ isActive }) =>
-              isActive
-                ? {
-                    background: "rgba(0, 212, 255, 0.08)",
-                    boxShadow: "inset 0 0 0 1px rgba(0, 212, 255, 0.18)",
-                  }
-                : {}
-            }
-          >
-            <Clock size={15} />
-            History
-          </NavLink>
+
         </nav>
       </div>
     </header>

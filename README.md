@@ -82,7 +82,6 @@ AI Cloud Cost Detective automates the discovery of these cost leaks with a beaut
 | 💰 **Savings Estimation** | Calculates estimated monthly & yearly savings in USD |
 | 🛠️ **Fix Commands** | Provides copy-paste Azure CLI commands to remediate each issue |
 | ⚡ **Real-Time Progress** | WebSocket-powered live progress tracking during analysis |
-| 📜 **Analysis History** | Browse past scans with full report details |
 | 🌙 **Dark Mode UI** | Premium glassmorphism design with cyan/purple accent palette |
 | 🔄 **In-Memory Storage** | Fast, zero-config analysis storage (production-ready DB adapters welcome) |
 
@@ -210,7 +209,7 @@ AI-Cloud-Cost-Detective/
 │   ├── postcss.config.js            # PostCSS pipeline
 │   └── 📁 src/
 │       ├── main.tsx                 # React entry — BrowserRouter + StrictMode
-│       ├── App.tsx                  # Route definitions (/, /report/:id, /history)
+│       ├── App.tsx                  # Route definitions (/, /report/:id)
 │       ├── api.ts                   # HTTP & WebSocket client functions
 │       ├── types.ts                 # TypeScript interfaces & type aliases
 │       ├── index.css                # Global styles, glassmorphism, animations
@@ -220,7 +219,7 @@ AI-Cloud-Cost-Detective/
 │       └── 📁 pages/
 │           ├── Dashboard.tsx        # Resource group selector + scan launcher
 │           ├── Report.tsx           # Analysis results with issue cards & fix commands
-│           └── History.tsx          # Past analyses table with savings overview
+
 │
 └── README.md                        # ← You are here
 ```
@@ -525,8 +524,7 @@ Displays the full analysis results after a scan completes. Includes:
 - **Severity breakdown** with color-coded badges (High/Medium/Low)
 - **Issue cards** with explanations, savings estimates, and copyable Azure CLI fix commands
 
-### History (`/history`)
-A tabular view of all past analyses with sortable columns for resource group, date, resources scanned, issues found, and estimated savings. Click any row to navigate to the full report.
+
 
 ---
 
