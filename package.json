@@ -1,0 +1,26 @@
+{
+  "name": "ai-cloud-cost-detective-reduces-cloud-billing-",
+  "version": "1.0.0",
+  "description": "<p align=\"center\">\n  <img src=\"https://img.shields.io/badge/Azure-Cloud-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white\" alt=\"Azure Cloud\" />\n  <img src=\"https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white\" alt=\"FastAPI\" />\n  <img src=\"https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black\" alt=\"React\" />\n  <img src=\"https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white\" alt=\"TypeScript\" />\n  <img src=\"https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white\" alt=\"Vite\" />\n  <img src=\"https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge\" alt=\"MIT License\" />\n  <img src=\"https://img.shields.io/badge/Open_Source-❤️-ef4444?style=for-the-badge\" alt=\"Open Source\" />\n</p>",
+  "main": "index.js",
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "cd Cloud_Scanner && python -m uvicorn main:app --port 8000",
+    "dev": "concurrently -n \"FRONT,BACK\" -c \"blue,green\" \"npm run dev:frontend\" \"npm run dev:backend\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UjwalNagrikar/AI-Cloud-Cost-Detective-Reduces-cloud-billing-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/UjwalNagrikar/AI-Cloud-Cost-Detective-Reduces-cloud-billing-/issues"
+  },
+  "homepage": "https://github.com/UjwalNagrikar/AI-Cloud-Cost-Detective-Reduces-cloud-billing-#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}

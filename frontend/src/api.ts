@@ -1,6 +1,8 @@
 import type { AnalysisRecord, ResourceGroup } from "./types";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+// Empty string forces requests to use the current URL (localhost:5173)
+// so the Vite proxy can forward them to the backend silently.
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
@@ -41,8 +43,7 @@ export async function fetchAnalysis(id: string) {
 }
 
 export function progressSocketUrl(analysisId: string) {
-  const url = new URL(API_URL);
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  url.pathname = `/ws/progress/${analysisId}`;
-  return url.toString();
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.host; // e.g., localhost:5173
+  return `${protocol}//${host}/ws/progress/${analysisId}`;
 }
